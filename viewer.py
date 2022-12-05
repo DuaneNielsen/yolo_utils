@@ -4,7 +4,7 @@ import yolo
 from PIL import Image
 from matplotlib.widgets import Button
 from matplotlib.patches import Rectangle
-
+import matplotlib.colors as mcolors
 
 class Display:
     def __init__(self, ds):
@@ -20,6 +20,7 @@ class Display:
 
         self.im = self.img_ax.imshow(image)
         self.patches = []
+        self.text = []
         self.draw_box(labels, image)
         self.axprev = self.fig.add_axes([0.7, 0.05, 0.1, 0.075])
         self.axnext = self.fig.add_axes([0.81, 0.05, 0.1, 0.075])
@@ -28,11 +29,21 @@ class Display:
         for patch in self.patches:
             patch.remove()
         self.patches = []
+        for txt in self.text:
+            txt.remove()
+        self.text = []
+
         for l in labels.labels:
             tx, ty, w, h = l.tl_w_h(image.width, image.height)
-            rect = Rectangle((tx, ty), w, h, linewidth=1, edgecolor='r', facecolor='none')
+            if l.label < len(mcolors.CSS4_COLORS):
+                color = mcolors.CSS4_COLORS[list(mcolors.CSS4_COLORS)[l.label]]
+            else:
+                color = mcolors.CSS4_COLORS[list(mcolors.CSS4_COLORS)[0]]
+            rect = Rectangle((tx, ty), w, h, linewidth=1, edgecolor=color, facecolor='none', label=l.name)
             self.img_ax.add_patch(rect)
             self.patches.append(rect)
+            txt = self.img_ax.text(tx, ty, l.name, backgroundcolor=color)
+            self.text.append(txt)
 
     def update(self):
         image_file, labels = self.ds.sets['train'][self.indx]

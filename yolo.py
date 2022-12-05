@@ -6,9 +6,14 @@ import yaml
 
 
 class YoloLabels:
-    def __init__(self, line):
+    def __init__(self, line, dataset):
         self.label = int(line.split()[0])
         _, self.cx, self.cy, self.w, self.h = map(float, line.split())
+        self.dataset = dataset
+        if self.label < len(self.dataset.names):
+            self.name = self.dataset.names[self.label]
+        else:
+            self.name = f'{self.label}'
 
     def __str__(self):
         return f'{self.label} {self.cx} {self.cy} {self.w} {self.h}'
@@ -19,16 +24,15 @@ class YoloLabels:
         ty = int((self.cy - self.h / 2) * dh)
         return tx, ty, self.w * dw, self.h * dh
 
-
-
 class YoloLabelFile:
-    def __init__(self, filename):
+    def __init__(self, filename, dataset):
         self.filename = filename
         self.labels = []
         self.label_count = {}
+        self.dataset = dataset
         with open(filename) as f:
             for line in f:
-                lbl = YoloLabels(line)
+                lbl = YoloLabels(line, dataset)
                 if lbl.label in self.label_count:
                     self.label_count[lbl.label] += 1
                 else:
@@ -68,11 +72,12 @@ class YoloLabelFile:
 
 
 class YoloSet:
-    def __init__(self, name, image_folder):
+    def __init__(self, name, image_folder, dataset):
         self.name = name
         self.image_folder = image_folder
         self.images_without_label = 0
         self.objects_by_class = {}
+        self.dataset = dataset
         self.data = self.build()
 
     def build(self):
@@ -87,7 +92,7 @@ class YoloSet:
             pbar.set_description(f'reading {self.name} set ...')
             label = label_from_image(image)
             if label.exists():
-                img, lblf = str(image), YoloLabelFile(str(label))
+                img, lblf = str(image), YoloLabelFile(str(label), self.dataset)
                 for lb, count in lblf.label_count.items():
                     if lb in self.objects_by_class:
                         self.objects_by_class[lb] += count
@@ -128,15 +133,15 @@ class YoloDataset:
         with open(data_yaml_path) as data_yaml:
             try:
                 data_yaml = yaml.safe_load(data_yaml)
-
-                self.sets['train'] = YoloSet('train', str(self.dir /
-                    data_yaml['train'])) if 'train' in data_yaml else None
-                self.sets['test'] = YoloSet('test', str(self.dir /
-                    data_yaml['test'])) if 'test' in data_yaml else None
-                self.sets['val'] = YoloSet('val',
-                                   str(self.dir / data_yaml['val'])) if 'val' in data_yaml else None
-                self.nc = data_yaml['nc']
                 self.names = data_yaml['names'] if 'names' in data_yaml else None
+                self.sets['train'] = YoloSet('train', str(self.dir /
+                    data_yaml['train']), self) if 'train' in data_yaml else None
+                self.sets['test'] = YoloSet('test', str(self.dir /
+                    data_yaml['test']), self) if 'test' in data_yaml else None
+                self.sets['val'] = YoloSet('val',
+                                   str(self.dir / data_yaml['val']), self) if 'val' in data_yaml else None
+                self.nc = data_yaml['nc']
+
             except yaml.YAMLError as exc:
                 print(exc)
                 raise Exception('could not load yaml file')
