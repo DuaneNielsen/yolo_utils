@@ -6,6 +6,7 @@ from matplotlib.widgets import Button
 from matplotlib.patches import Rectangle
 import matplotlib.colors as mcolors
 
+
 class Display:
     def __init__(self, ds):
         self.indx = 0
@@ -15,7 +16,7 @@ class Display:
         self.fig.subplots_adjust(bottom=0.2)
         # self.img_ax.invert_yaxis()
 
-        image_file, labels = self.ds.sets['train'][self.indx]
+        image_file, labels = self.ds.splits['train'][self.indx]
         image = Image.open(image_file)
 
         self.im = self.img_ax.imshow(image)
@@ -39,23 +40,22 @@ class Display:
                 color = mcolors.CSS4_COLORS[list(mcolors.CSS4_COLORS)[l.label]]
             else:
                 color = mcolors.CSS4_COLORS[list(mcolors.CSS4_COLORS)[0]]
-            rect = Rectangle((tx, ty), w, h, linewidth=1, edgecolor=color, facecolor='none', label=l.name)
+            rect = Rectangle((tx, ty), w, h, linewidth=1, edgecolor=color, facecolor='none', label=f'{l.label} {l.name}')
             self.img_ax.add_patch(rect)
             self.patches.append(rect)
-            txt = self.img_ax.text(tx, ty, l.name, backgroundcolor=color)
+            txt = self.img_ax.text(tx, ty, f'{l.label} {l.name}', backgroundcolor=color)
             self.text.append(txt)
 
     def update(self):
-        image_file, labels = self.ds.sets['train'][self.indx]
+        image_file, labels = self.ds.splits['train'][self.indx]
         image = Image.open(image_file)
         self.im.set_data(image)
 
         self.draw_box(labels, image)
         self.fig.canvas.draw_idle()
-        plt.pause(1)
 
     def next(self, args):
-        if self.indx < len(ds.sets['train'])-1:
+        if self.indx < len(ds.splits['train'])-1:
             self.indx += 1
         self.update()
 
