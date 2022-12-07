@@ -27,11 +27,18 @@ if __name__ == '__main__':
         table.add_column("Images", justify="right", style="green")
 
         lbls = sorted([lbl for lbl in ds[split].objects_by_class])
+
+        total_objects, total_images = 0, 0
+
         for lbl in lbls:
             object_count = ds[split].objects_by_class[lbl]
             image_count = ds[split].images_with_object[lbl]
             name = ds.lookup_name(lbl)
             table.add_row(f"{lbl}", name, f'{object_count}', f'{image_count}')
+            total_objects += object_count
+
+        table.add_row(f"", 'no label', '', f'{ds[split].images_without_label}', style='cyan')
+        table.add_row(f"all", '', f'{total_objects}', f'{len(ds[split])}', style='cyan')
 
         console = Console()
         console.print(table)

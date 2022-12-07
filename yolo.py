@@ -120,6 +120,7 @@ class YoloSplit:
         self.objects_by_class = {}
         self.images_with_object = {}
         self.names = names
+        self.data = []
 
     def load(self, image_folder):
         self.image_folder = image_folder
@@ -132,9 +133,13 @@ class YoloSplit:
         pbar = tqdm(list(files))
         for image in pbar:
             pbar.set_description(f'reading {self.name} set ...')
-            label = label_from_image(image)
-            if label.exists():
-                img, lblf = str(image), YoloLabelFile(str(label), self.names)
+            label_file_path = label_from_image(image)
+            if label_file_path.exists():
+                img, lblf = str(image), YoloLabelFile(str(label_file_path), self.names)
+
+                if len(lblf) == 0:
+                    warnings.warn('Warning: empty label file')
+                    self.images_without_label += 1
                 for lb, count in lblf.label_count.items():
                     if lb in self.objects_by_class:
                         self.objects_by_class[lb] += count
