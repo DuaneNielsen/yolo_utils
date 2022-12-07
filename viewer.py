@@ -8,15 +8,16 @@ import matplotlib.colors as mcolors
 
 
 class Display:
-    def __init__(self, ds):
+    def __init__(self, ds, split):
         self.indx = 0
         self.fig, self.axes = plt.subplots(1, 1)
         self.img_ax = self.axes
         self.ds = ds
+        self.split = split
         self.fig.subplots_adjust(bottom=0.2)
-        # self.img_ax.invert_yaxis()
+        self.img_ax.set_title(f'split: {split}')
 
-        image_file, labels = self.ds.splits['train'][self.indx]
+        image_file, labels = self.ds.splits[split][self.indx]
         image = Image.open(image_file)
 
         self.im = self.img_ax.imshow(image)
@@ -47,7 +48,7 @@ class Display:
             self.text.append(txt)
 
     def update(self):
-        image_file, labels = self.ds.splits['train'][self.indx]
+        image_file, labels = self.ds.splits[self.split][self.indx]
         image = Image.open(image_file)
         self.im.set_data(image)
 
@@ -55,7 +56,7 @@ class Display:
         self.fig.canvas.draw_idle()
 
     def next(self, args):
-        if self.indx < len(ds.splits['train'])-1:
+        if self.indx < len(ds.splits[self.split])-1:
             self.indx += 1
         self.update()
 
@@ -69,10 +70,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('data_yaml')
+    parser.add_argument('split', choices=['train', 'val', 'test'], default='train')
     args = parser.parse_args()
 
     ds = yolo.YoloDataset(args.data_yaml)
-    display = Display(ds)
+    display = Display(ds, args.split)
     bnext = Button(display.axnext, 'Next')
     bnext.on_clicked(display.next)
     bprev = Button(display.axprev, 'Previous')

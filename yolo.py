@@ -16,7 +16,7 @@ def create_skeleton(fn):
     (Path(fn) / 'val' / 'images').mkdir(parents=True, exist_ok=True)
 
     # create the data.yaml
-    if not (Path(fn)/'data_yaml').exists():
+    if not (Path(fn)/'data.yaml').exists():
 
         data_yaml = {
             'train': './train/images',
@@ -147,7 +147,7 @@ class YoloSplit:
             else:
                 self.images_without_label += 1
                 warnings.warn("Warning: image in the dataset but no file, this is OK if it happens infrequently")
-            self.data = set
+        self.data = set
 
     def __len__(self):
         return len(self.data)
@@ -163,23 +163,19 @@ class YoloDataset:
     def __init__(self, data_yaml_path):
         self.dir = Path(data_yaml_path).parent
         self.splits = {}
-
-        def filter_silly_paths(silly_path):
-            if silly_path[0:2] == '..':
-                return silly_path[3:]
-            else:
-                return silly_path
+        self.data_yaml = None
 
         # change to root directory of dataset
         with open(data_yaml_path) as data_yaml:
             try:
                 data_yaml = yaml.safe_load(data_yaml)
+                self.data_yaml = data_yaml
                 self.names = data_yaml['names'] if 'names' in data_yaml else None
 
                 def load_split(name):
                     split = YoloSplit(name, self.names)
                     if name in data_yaml:
-                        path = str(self.dir / filter_silly_paths(data_yaml[name]))
+                        path = str(self.dir / YoloDataset.filter_silly_paths(data_yaml[name]))
                         split.load(path)
                     self.splits[name] = split
 
@@ -213,6 +209,21 @@ class YoloDataset:
                 return self.names[label]
         else:
             return ''
+
+    @staticmethod
+    def filter_silly_paths(silly_path):
+        """
+        Roboflow gives paths like ../train/image... that don't exist!
+        if we get this fix it by removing the front part
+        """
+        if silly_path[0:2] == '..':
+            return silly_path[3:]
+        else:
+            return silly_path
+
+    def get_path(self, split):
+        path = YoloDataset.filter_silly_paths(self.data_yaml[split]) if split in self.data_yaml else split
+        return str(Path(path).parent)
 
     def __repr__(self):
         return str(self.__dict__)
