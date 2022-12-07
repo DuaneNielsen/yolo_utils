@@ -17,6 +17,7 @@ def copy_to_split(directory, indices, split):
 
 
 def move_to_split(directory, indices, split):
+    assert split in {'train', 'test', 'val'}, f'I cannot move to {split}'
     indices = tqdm(indices)
     indices.set_description(f'moving images and labels to {split}')
 
@@ -61,8 +62,9 @@ if __name__ == '__main__':
     elif len(ds.train) > 0 and len(ds.test) > 0 and len(ds.val) == 0:
         val = random.sample(list(range(len(ds.train))), len(ds.test))
         print(f'no val split.. moving {len(val)}/{len(ds.train)} images to val ')
-        yolo.create_skeleton(args.directory)
-        move_to_split(args.directory, val, ds.get_path('val'))
+        if not args.dry_run:
+            yolo.create_skeleton(args.directory)
+            move_to_split(args.directory, val, ds.get_path('val'))
 
     else:
         print('dataset contains all splits')

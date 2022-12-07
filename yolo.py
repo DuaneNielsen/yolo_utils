@@ -98,8 +98,8 @@ class YoloLabelFile:
     def map(self, map):
         minime = copy(self)
         for label in minime.labels:
-            if label in map:
-                label.label = map[label]
+            if label.label in map:
+                label.label = map[label.label]
         return minime
 
     def write(self, dir):
@@ -170,6 +170,8 @@ class YoloDataset:
         self.splits = {}
         self.data_yaml = None
 
+        validate_data_yaml(data_yaml_path)
+
         # change to root directory of dataset
         with open(data_yaml_path) as data_yaml:
             try:
@@ -232,3 +234,20 @@ class YoloDataset:
 
     def __repr__(self):
         return str(self.__dict__)
+
+
+def validate_data_yaml(data_yaml_path):
+    if not Path(data_yaml_path).exists():
+        raise Exception(f'{data_yaml_path} not found')
+    with open(data_yaml_path) as data_yaml:
+        try:
+            data_yaml = yaml.safe_load(data_yaml)
+            splits = ['train', 'test', 'val']
+            for split in splits:
+                if split in data_yaml:
+                    path = YoloDataset.filter_silly_paths(data_yaml[split])
+                    path = Path(data_yaml_path).parent/path
+                    if not path.exists():
+                        raise Exception(f'data.yaml references {str(path)} but I cant find it')
+        except yaml.YAMLError as exc:
+            raise exc

@@ -50,7 +50,9 @@ class Display:
     def update(self):
         image_file, labels = self.ds.splits[self.split][self.indx]
         image = Image.open(image_file)
+        self.img_ax.set_title(labels.filename)
         self.im.set_data(image)
+        self.im.set_extent((0, image.width, image.height, 0))
 
         self.draw_box(labels, image)
         self.fig.canvas.draw_idle()
@@ -69,15 +71,20 @@ class Display:
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('data_yaml')
+    parser.add_argument('directory')
     parser.add_argument('split', choices=['train', 'val', 'test'], default='train')
     args = parser.parse_args()
 
-    ds = yolo.YoloDataset(args.data_yaml)
-    display = Display(ds, args.split)
-    bnext = Button(display.axnext, 'Next')
-    bnext.on_clicked(display.next)
-    bprev = Button(display.axprev, 'Previous')
-    bprev.on_clicked(display.prev)
+    data_yaml = args.directory + '/data.yaml'
 
-    plt.show()
+    ds = yolo.YoloDataset(data_yaml)
+
+    if len(ds[args.split]) > 0:
+        display = Display(ds, args.split)
+        bnext = Button(display.axnext, 'Next')
+        bnext.on_clicked(display.next)
+        bprev = Button(display.axprev, 'Previous')
+        bprev.on_clicked(display.prev)
+        plt.show()
+    else:
+        print(f"datset does not contain {args.split} split")

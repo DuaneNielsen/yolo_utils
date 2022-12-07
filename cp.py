@@ -15,12 +15,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='copy a subset yolo dataset to target directory'
                     'you can copy a subset and also remap classes')
-    parser.add_argument('data_yaml', help='data.yaml of the source dataset')
+    parser.add_argument('src_dir', help='directory of the source dataset')
     parser.add_argument('dest', help='the directory of the dataset to copy to')
     parser.add_argument('label_map', type=str, nargs='+',
                         help='list of src_label:dest_label to copy'
                         'ie; 0:1 will copy only class 0 from source dataset to class 1')
     args = parser.parse_args()
+
+    data_yaml = args.src_dir + '/data.yaml'
 
     whitelist, label_map = [], {}
     for mapping in args.label_map:
@@ -32,7 +34,7 @@ if __name__ == '__main__':
         whitelist += [src_lbl]
         label_map[src_lbl] = dst_lbl
 
-    ds = YoloDataset(args.data_yaml)
+    ds = YoloDataset(data_yaml)
     yolo.create_skeleton(args.dest)
 
     def copy_set(ds, dest, name, label_dict, label_map):
