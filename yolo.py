@@ -2,7 +2,7 @@ import warnings
 from pathlib import Path
 from tqdm import tqdm
 import yaml
-from copy import deepcopy
+from copy import copy
 
 
 def create_skeleton(fn):
@@ -80,7 +80,7 @@ class YoloLabelFile:
         """
         assert not (blacklist is not None and whitelist is not None), 'only supply a blacklist OR a whitelist'
 
-        minime = deepcopy(self)
+        minime = copy(self)
         i = 0
         while i < len(minime.labels):
             if blacklist is not None:
@@ -96,7 +96,7 @@ class YoloLabelFile:
         return minime
 
     def map(self, map):
-        minime = deepcopy(self)
+        minime = copy(self)
         for label in minime.labels:
             if label in map:
                 label.label = map[label]
@@ -112,16 +112,17 @@ class YoloLabelFile:
             f.write(str(self))
 
 
-class YoloSet:
-    def __init__(self, name, image_folder, names):
-        self.name = name
-        self.image_folder = image_folder
+class YoloSplit:
+    def __init__(self, split, names):
+        self.name = split
+        self.image_folder = None
         self.images_without_label = 0
         self.objects_by_class = {}
+        self.images_with_object = {}
         self.names = names
-        self.data = self.build()
 
-    def build(self):
+    def load(self, image_folder):
+        self.image_folder = image_folder
         files = Path(self.image_folder).glob("*")
 
         def label_from_image(image_path):
@@ -137,14 +138,16 @@ class YoloSet:
                 for lb, count in lblf.label_count.items():
                     if lb in self.objects_by_class:
                         self.objects_by_class[lb] += count
+                        self.images_with_object[lb] += 1
                     else:
                         self.objects_by_class[lb] = count
+                        self.images_with_object[lb] = 1
+
                 set.append((img, lblf))
             else:
                 self.images_without_label += 1
                 warnings.warn("Warning: image in the dataset but no file, this is OK if it happens infrequently")
-
-        return set
+            self.data = set
 
     def __len__(self):
         return len(self.data)
@@ -162,7 +165,10 @@ class YoloDataset:
         self.splits = {}
 
         def filter_silly_paths(silly_path):
-            return silly_path[3:]
+            if silly_path[0:2] == '..':
+                return silly_path[3:]
+            else:
+                return silly_path
 
         # change to root directory of dataset
         with open(data_yaml_path) as data_yaml:
@@ -170,17 +176,16 @@ class YoloDataset:
                 data_yaml = yaml.safe_load(data_yaml)
                 self.names = data_yaml['names'] if 'names' in data_yaml else None
 
-                self.splits['train'] = YoloSet('train', str(self.dir /
-                                                            data_yaml['train']),
-                                               self.names) if 'train' in data_yaml else None
+                def load_split(name):
+                    split = YoloSplit(name, self.names)
+                    if name in data_yaml:
+                        path = str(self.dir / filter_silly_paths(data_yaml[name]))
+                        split.load(path)
+                    self.splits[name] = split
 
-                self.splits['test'] = YoloSet('test', str(self.dir /
-                                                          data_yaml['test']),
-                                              self.names) if 'test' in data_yaml else None
-
-                self.splits['val'] = YoloSet('val',
-                                             str(self.dir / data_yaml['val']),
-                                             self.names) if 'val' in data_yaml else None
+                load_split('train')
+                load_split('test')
+                load_split('val')
                 self.nc = data_yaml['nc'] if 'nc' in data_yaml else None
 
             except yaml.YAMLError as exc:
