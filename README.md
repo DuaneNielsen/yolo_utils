@@ -2,4 +2,6 @@
 
 viewer.py - views images and annotations
 
-filter_classes - copies only specific classes from a dataset
+ls - list files
+cp - copy and re-map objects from dataset
+split - fill empty splits with randomly sampled training data
